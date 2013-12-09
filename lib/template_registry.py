@@ -3,9 +3,7 @@ import binascii
 import util
 import StringIO
 import settings
-if settings.COINDAEMON_ALGO == 'scrypt':
-	import ltc_scrypt
-else: pass
+import sha3
 from twisted.internet import defer
 from lib.exceptions import SubmitException
 
@@ -142,9 +140,7 @@ class TemplateRegistry(object):
     
     def diff_to_target(self, difficulty):
         '''Converts difficulty to target'''
-	if settings.COINDAEMON_ALGO == 'scrypt':
-	       	diff1 = 0x0000ffff00000000000000000000000000000000000000000000000000000000
-        else:   diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000
+	diff1 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000
 	return diff1 / difficulty
     
     def get_job(self, job_id):
@@ -225,16 +221,17 @@ class TemplateRegistry(object):
         # 3. Serialize header with given merkle, ntime and nonce
         header_bin = job.serialize_header(merkle_root_int, ntime_bin, nonce_bin)
     
-        # 4. Reverse header and compare it with target of the user
-	if settings.COINDAEMON_ALGO == 'scrypt':
-		hash_bin = ltc_scrypt.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
-        else: 	hash_bin = util.doublesha(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
+	# 4. Reverse header and compare it with target of the user
+        s = sha3.SHA3256()
+        ntime1 = str(int(ntime, 16))
+        s.update(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]) + ntime1)
+        hash_bin_temp = s.hexdigest()
+        s = sha3.SHA3256()
+        s.update(hash_bin_temp)
+        hash_bin = s.hexdigest()
         hash_int = util.uint256_from_str(hash_bin)
-        scrypt_hash_hex = "%064x" % hash_int
+        keccak_hash_hex = "%064x" % hash_int
         header_hex = binascii.hexlify(header_bin)
-	if settings.COINDAEMON_ALGO == 'scrypt':
-	      	header_hex = header_hex+"000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000"
-        else: pass        
                  
         target_user = self.diff_to_target(difficulty)        
         if hash_int > target_user and \
@@ -251,13 +248,19 @@ class TemplateRegistry(object):
         share_diff = int(self.diff_to_target(hash_int))
 
 
-   # 5. Compare hash with target of the network        
+ 	# 5. Compare hash with target of the network        
         if hash_int <= job.target:
             # Yay! It is block candidate! 
             log.info("We found a block candidate! %s" % scrypt_hash_hex)
-
-            # Reverse the header and get the potential block hash (for scrypt only) 
-            block_hash_bin = util.doublesha(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
+	
+            # Reverse the header and get the potential block hash (for scrypt only)
+            s = sha3.SHA3256()
+            ntime1 = str(int(ntime, 16))
+            s.update(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]) + ntime1)
+            hash_bin_temp = s.hexdigest()
+            s = sha3.SHA3256()
+            s.update(hash_bin_temp)
+            block_hash_bin = s.hexdigest()
             block_hash_hex = block_hash_bin[::-1].encode('hex_codec')
            
             # 6. Finalize and serialize block object 
@@ -279,8 +282,14 @@ class TemplateRegistry(object):
                 return (header_hex, scrypt_hash_hex, share_diff, on_submit)
         
         if settings.SOLUTION_BLOCK_HASH:
-        # Reverse the header and get the potential block hash (for scrypt only) only do this if we want to send in the block hash to the shares table
-            block_hash_bin = util.doublesha(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
+	 # Reverse the header and get the potential block hash (for scrypt only) only do this if we want to send in the block hash to the shares table
+            s = sha3.SHA3256()
+            ntime1 = str(int(ntime, 16))
+            s.update(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]) + ntime1)
+            hash_bin_temp = s.hexdigest()
+            s = sha3.SHA3256()
+            s.update(hash_bin_temp)
+            block_hash_bin = s.hexdigest()
             block_hash_hex = block_hash_bin[::-1].encode('hex_codec')
             return (header_hex, block_hash_hex, share_diff, None)
         else:
