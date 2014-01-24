@@ -10,3 +10,7 @@
 [submodule "externals/quarkcoin-hash"]
 	path = externals/quarkcoin-hash
 	url = https://github.com/Neisklar/quarkcoin-hash-python
+[submodule "externals/medcoin_hybrid"]
+	path = externals/medcoin_hybrid
+	url = https://github.com/mrtexaznl/medcoin_hybrid
+
