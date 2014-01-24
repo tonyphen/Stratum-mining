@@ -26,15 +26,11 @@ if settings.COINDAEMON_ALGO == 'scrypt':
 elif settings.COINDAEMON_ALGO == 'quark':
     log.debug("########################################### Loading Quark Support #########################################################")
     import quark_hash
+elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+    import medcoin_hybrid
 else: 
     log.debug("########################################### Loading SHA256 Support ######################################################")
 
-#if settings.COINDAEMON_Reward == 'POS':
-#        log.debug("########################################### Loading POS Support #########################################################")
-#        pass
-#else:
-#        log.debug("########################################### Loading POW Support ######################################################")
-#        pass
 
 if settings.COINDAEMON_TX == 'yes':
     log.debug("########################################### Loading SHA256 Transaction Message Support #########################################################")
@@ -239,6 +235,8 @@ class CBlock(object):
 	        self.scrypt = None
         elif settings.COINDAEMON_ALGO == 'quark':
                 self.quark = None
+        elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+        	self.scrypthybrid = None
 	else: pass
 	if settings.COINDAEMON_Reward == 'POS':
 		self.signature = b""
@@ -293,6 +291,18 @@ class CBlock(object):
                 r.append(struct.pack("<I", self.nNonce))
                 self.quark = uint256_from_str(quark_hash.getPoWHash(''.join(r)))
              return self.quark
+    elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+       def calc_hybridsch256(self):
+             if self.scrypthyrbid is None:
+                r = []
+                r.append(struct.pack("<i", self.nVersion))
+                r.append(ser_uint256(self.hashPrevBlock))
+                r.append(ser_uint256(self.hashMerkleRoot))
+                r.append(struct.pack("<I", self.nTime))
+                r.append(struct.pack("<I", self.nBits))
+                r.append(struct.pack("<I", self.nNonce))
+                self.scrypthybrid = uint256_from_str(medcoin_hybrid.getPoWHash(''.join(r)))
+             return self.scrypthybrid
     else:
        def calc_sha256(self):
            if self.sha256 is None:
@@ -312,6 +322,8 @@ class CBlock(object):
 	   self.calc_scrypt()
 	elif settings.COINDAEMON_ALGO == 'quark':
            self.calc_quark()
+        elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+           self.calc_scrypthybrid()
         else:
 	   self.calc_sha256()
         target = uint256_from_compact(self.nBits)
@@ -321,6 +333,9 @@ class CBlock(object):
         elif settings.COINDAEMON_ALGO == 'quark':
 	   if self.quark > target:
                 return false
+        elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+       	   if self.scrypthybrid > target:
+       	   	return false
 	else:
 	   if self.sha256 > target:
            	return False
