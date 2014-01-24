@@ -9,6 +9,8 @@ elif settings.COINDAEMON_ALGO  == 'scrypt-jane':
 	import yac_scrypt
 elif settings.COINDAEMON_ALGO == 'quark':
         import quark_hash
+elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+        import medcoin_hybrid
 else: pass
 from twisted.internet import defer
 from lib.exceptions import SubmitException
@@ -148,7 +150,7 @@ class TemplateRegistry(object):
     
     def diff_to_target(self, difficulty):
         '''Converts difficulty to target'''
-	if settings.COINDAEMON_ALGO == 'scrypt' or 'scrypt-jane':
+	if settings.COINDAEMON_ALGO == 'scrypt' or settings.COINDAEMON_ALGO == 'scrypt-jane' or settiongs.COINDAEMON_ALGO == 'scrypthybrid':
 	       	diff1 = 0x0000ffff00000000000000000000000000000000000000000000000000000000
         elif settings.COINDAEMON_ALGO == 'quark':
                 diff1 = 0x000000ffff000000000000000000000000000000000000000000000000000000
@@ -240,11 +242,14 @@ class TemplateRegistry(object):
 		hash_bin = yac_scrypt.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]), int(ntime, 16))        
         elif settings.COINDAEMON_ALGO == 'quark':
                 hash_bin = quark_hash.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
-	else: 	hash_bin = util.doublesha(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
+        elif settings.COINDAEMON_ALGO == 'scrypthybrid':
+                hash_bin = medcoin_hybrid.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
+	else: 	
+		hash_bin = util.doublesha(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
         hash_int = util.uint256_from_str(hash_bin)
         scrypt_hash_hex = "%064x" % hash_int
         header_hex = binascii.hexlify(header_bin)
-	if settings.COINDAEMON_ALGO == 'scrypt' or settings.COINDAEMON_ALGO == 'scrypt-jane':
+	if settings.COINDAEMON_ALGO == 'scrypt' or settings.COINDAEMON_ALGO == 'scrypt-jane' or settings.COINDAEMON_ALGO == 'scrypthybrid':
 	      	header_hex = header_hex+"000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000"
         elif settings.COINDAEMON_ALGO == 'quark':
                 header_hex = header_hex+"000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000"
@@ -267,13 +272,10 @@ class TemplateRegistry(object):
             # Yay! It is block candidate! 
             log.info("We found a block candidate! %s" % scrypt_hash_hex)
 
-            # Reverse the header and get the potential block hash (for scrypt only) 
-	    #if settings.COINDAEMON_ALGO == 'scrypt' or settings.COINDAEMON_ALGO == 'sha256d':
-	    #   if settings.COINDAEMON_Reward == 'POW':
+	    # Find the potential block hash
 	    block_hash_bin = util.doublesha(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
 	    block_hash_hex = block_hash_bin[::-1].encode('hex_codec')
-            #else:   block_hash_hex = hash_bin[::-1].encode('hex_codec')
-	    #else:  block_hash_hex = hash_bin[::-1].encode('hex_codec')
+
             # 6. Finalize and serialize block object 
             job.finalize(merkle_root_int, extranonce1_bin, extranonce2_bin, int(ntime, 16), int(nonce, 16))
             
