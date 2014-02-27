@@ -13,6 +13,8 @@ elif settings.COINDAEMON_ALGO == 'quark':
 elif settings.COINDAEMON_ALGO == 'max':
     import max_hash
     from sha3 import sha3_256
+elif settings.COINDAEMON_ALGO == 'blake':
+     import blake_ghash
 elif settings.COINDAEMON_ALGO == 'skeinhash':
     import skeinhash
 elif settings.COINDAEMON_ALGO == 'keccak':
@@ -158,8 +160,10 @@ class TemplateRegistry(object):
             diff1 = 0x0000ffff00000000000000000000000000000000000000000000000000000000
         elif settings.COINDAEMON_ALGO == 'quark':
             diff1 = 0x000000ffff000000000000000000000000000000000000000000000000000000
-        elif settings.coindaemon_algo == 'max':
+        elif settings.COINDAEMON_ALGO == 'max':
             diff1 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000
+        elif settings.COINDAEMON_algo == 'blake':
+             diff1 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000
         elif settings.COINDAEMON_ALGO == 'keccak':
             diff1 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000
         else:
@@ -235,7 +239,7 @@ class TemplateRegistry(object):
                 
         # 1. Build coinbase
         coinbase_bin = job.serialize_coinbase(extranonce1_bin, extranonce2_bin)
-        if settings.COINDAEMON_ALGO == 'max':
+        if settings.COINDAEMON_ALGO == 'max' or settings.COINDAEMON_ALGO == 'blake':
              coinbase_hash = sha256(coinbase_bin).digest()
         else:
              coinbase_hash = util.doublesha(coinbase_bin)
@@ -257,6 +261,8 @@ class TemplateRegistry(object):
         elif settings.COINDAEMON_ALGO == 'max':
             hash_bin = max_hash.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
             hash_bin = sha3_256(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ])).digest()[0:33]
+        elif settings.COINDAEMON_ALGO == 'blake':
+             hash_bin = blake_hash.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))#.digest()[0:33]
 	elif settings.COINDAEMON_ALGO == 'skeinhash':
             hash_bin = skeinhash.skeinhash(''.join([ header_bin[i*4:i*4+4][::-1] for i in range(0, 20) ]))
         elif settings.COINDAEMON_ALGO == 'keccak':
@@ -299,6 +305,9 @@ class TemplateRegistry(object):
             # Reverse the header and get the potential block hash (for scrypt only) 
             if settings.COINDAEMON_ALGO == 'max':
                 block_hash_bin = sha3_256(''.join([ header_bin[i*4:i*4+4][::-1]
+                    for i in range(0, 20) ]) + str(int(ntime, 16))).hexdigest()
+            elif settings.COINDAEMON_ALGO == 'blake':
+            	 block_hash_bin = blake_hash.getPoWHash(''.join([ header_bin[i*4:i*4+4][::-1]
                     for i in range(0, 20) ]) + str(int(ntime, 16))).hexdigest()
             elif settings.COINDAEMON_ALGO == 'keccak':
                 s = sha3.SHA3256()
