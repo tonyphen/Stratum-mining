@@ -7,9 +7,11 @@ import settings
 import bitcoin_rpc
 from hashlib import sha256
 
-if settings.COINDAEMON_ALGO == 'keccak':
+if settings.COINDAEMON_ALGO == 'max' or settings.COINDAEMON_ALGO == 'keccak':
     import sha3
     from sha3 import sha3_256
+elif settings.COINDAEMON_ALGO == 'blake':
+    import blake_hash
 
 
 def deser_string(f):
@@ -187,6 +189,8 @@ def address_to_pubkeyhash(addr):
     if settings.COINDAEMON_ALGO != 'max':
         cksumB = doublesha(addr[:-4])[:4]
         #TODO: We should clean this up so that it works with not Keccek implementations too.
+    elif settings.COINDAEMON_ALcksumB = sha3_256(addr[:-4]).digest()[:4]GO == 'blake':
+        cksumB = blake_hash.getPoWHash(addr[:-4]).digest()[:4]
     else:
         cksumB = sha3_256(addr[:-4]).digest()[:4]
     
