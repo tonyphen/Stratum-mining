@@ -32,6 +32,8 @@ elif settings.COINDAEMON_ALGO == 'max':
     from sha3 import sha3_256
 elif settings.COINDAEMON_ALGO == 'keccak':
      import sha3
+elif settings.COINDAEMON_ALGO == 'blake':
+     import blake_hash
 else: 
     log.debug("########################################### Loading SHA256 Support ######################################################")
 
@@ -157,6 +159,8 @@ class CTransaction(object):
     def __init__(self):
         if settings.COINDAEMON_ALGO == 'max':
             self.sha3 = None
+        elif settings.COINDAEMON_ALGO == 'blake':
+            self.blake = None
         if settings.COINDAEMON_Reward == 'POW':
             self.nVersion = 1
             if settings.COINDAEMON_TX == 'yes':
@@ -242,6 +246,8 @@ class CBlock(object):
             self.quark = None
         elif settings.COINDAEMON_ALGO == 'max':
             self.max = None
+        elif settings.COINDAEMON_ALGO == 'blake':
+            self.blake = None
         elif settings.COINDAEMON_ALGO == 'keccak':
              self.sha3 = None
         else: pass
@@ -311,6 +317,18 @@ class CBlock(object):
                 r.append(struct.pack("<I", self.nNonce))
                 self.max = uint256_from_str(sha3_256(''.join(r)).digest())
             return self.max
+    elif settings.COINDAEMON_ALGO == 'blake':
+        def calc_blake(self):
+            if self.blake is None:
+                r = []
+                r.append(struct.pack("<i", self.nVersion))
+                r.append(ser_uint256(self.hashPrevBlock))
+                r.append(ser_uint256(self.hashMerkleRoot))
+                r.append(struct.pack("<I", self.nTime))
+                r.append(struct.pack("<I", self.nBits))
+                r.append(struct.pack("<I", self.nNonce))
+                self.blake = uint256_from_str(blake_hash.getPoWHash(''.join(r)).digest())
+            return self.blake
     elif settings.COINDAEMON_ALGO == 'keccak':
         def calc_sha3(self):
             if self.sha3 is None:
@@ -350,6 +368,8 @@ class CBlock(object):
             self.calc_quark()
         elif settings.COINDAEMON_ALGO == 'max':
             self.calc_max()
+        elif settings.COINDAEMON_ALGO == 'blake':
+            self.calc_blake()
         elif settings.COINDAEMON_ALGO == 'keccak':
              self.calc_sha3()
         else:
@@ -365,6 +385,9 @@ class CBlock(object):
                 return False
         elif settings.COINDAEMON_ALGO == 'max':
             if self.max > target:
+                return False
+        elif settings.COINDAEMON_ALGO == 'blake':
+            if self.blake > target:
                 return False
         elif settings.COINDAEMON_ALGO == 'sha3':
             if self.sha3 > target:
