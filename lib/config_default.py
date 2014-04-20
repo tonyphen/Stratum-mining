@@ -2,7 +2,7 @@
 This is example configuration for Stratum server.
 Please rename it to config.py and fill correct values.
 '''
-
+CONFIG_VERSION = 0.1
 # ******************** GENERAL SETTINGS ***************
 
 # Enable some verbose debug (logging requests and responses).
